@@ -1,6 +1,6 @@
 # Documentación de Arquitectura del Sistema de Banca Digital
 
-![Diagrama del Sistema Bancario](diagramas/Banking%20System%20Diagram.png)
+![Diagrama del Sistema Bancario](Diagramas/Banking%20System%20Diagram.png)
 
 ## Introducción
 

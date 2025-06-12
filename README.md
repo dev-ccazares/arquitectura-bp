@@ -53,7 +53,7 @@ Se implementan los siguientes patrones:
 - Microservicios sobre AWS EKS
 - Patrón SAGA para transacciones distribuidas
 - Auditoría Centralizada
-- Capa de orquestación conGQL y BFF
+- Capa de orquestación con GQL y BFF
 - Frontend modular (micro frontends)
 
 ## 7. Integraciones Externas

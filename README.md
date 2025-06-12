@@ -1,98 +1,123 @@
 # Documentación de Arquitectura del Sistema de Banca Digital
 
-![Diagrama del Sistema Bancario](Diagramas/Banking%20System%20Diagram.png)
+## 1. Introducción
 
-## Introducción
+El presente documento tiene como objetivo describir y justificar la arquitectura propuesta para el Sistema de Banca Digital, evaluando los elementos técnicos, normativos y de diseño de la solución. Esta arquitectura ha sido concebida para satisfacer requisitos funcionales, no funcionales y regulatorios, garantizando seguridad, escalabilidad y mantenibilidad.
 
-Este sistema permite a los usuarios acceder al historial de sus movimientos, realizar transferencias y pagos entre cuentas propias e interbancarias. La información del cliente se extrae de dos sistemas: una plataforma Core que contiene datos básicos del cliente, movimientos y productos, y un sistema independiente que complementa la información del cliente cuando se requieren detalles adicionales.
+## 2. Justificación de la Solución
 
-Debido a normativas, el sistema notifica a los usuarios sobre los movimientos realizados. Para cumplir con esto, se integran al menos dos sistemas de notificación, tanto internos como externos.
+La solución propuesta está alineada con los requerimientos funcionales establecidos, incluyendo: registro de usuario, autenticación segura, acceso a historial de movimientos, ejecución de transacciones interbancarias y propias, y envío de notificaciones. Cada decisión arquitectónica se justifica en base a criterios de escalabilidad, seguridad, cumplimiento normativo y experiencia de usuario.
 
-## Arquitectura del Sistema
+## 3. Consideraciones Normativas y Operativas
 
-### 1. Frontend
+La arquitectura cumple con los siguientes elementos importantes para entidades financieras:
 
-El sistema cuenta con dos aplicaciones frontend:
+- Ley de Protección de Datos Personales.
+- Seguridad Financiera (MFA, OAuth2.0, cifrado de datos sensibles).
+- Alta Disponibilidad (HA) mediante despliegue multi-región.
+- Recuperación ante Desastres (DR) con backups programados.
+- Monitoreo, auto-healing y excelencia operativa.
 
-- **Single Page Application (SPA)** en React para la web, utilizando una arquitectura de micro-frontends con **Single SPA** para modularidad y escalabilidad.
-- **Aplicación móvil** en React Native para dispositivos móviles, empleando una arquitectura de micro-frontends mediante módulos instalables, lo cual permite una alta flexibilidad y facilidad de actualización.
+Se ha optado por una arquitectura desacoplada, modular y escalable que permite fácil integración de nuevos componentes en el futuro.
 
-**Justificación de la elección de tecnologías**: La elección de React y React Native, junto con una arquitectura de micro-frontends, permite compartir componentes y lógica de negocio entre la aplicación web y móvil, optimizando el desarrollo y mantenimiento. Esta arquitectura modular facilita la integración y escalabilidad del sistema.
-No se optó por **Angular** en el desarrollo web ni **Flutter** en la aplicación móvil para mantener una coherencia en el stack tecnológico basado en React. Angular y Flutter, aunque potentes, requerirían un conocimiento adicional en diferentes frameworks y lenguajes (TypeScript para Angular y Dart para Flutter), lo cual aumentaría la complejidad y los recursos necesarios en el equipo de desarrollo.
+## 4. Arquitectura y Diagramas (Modelo C4)
 
-### 2. Backend y Microservicios
+### C1 - Diagrama de Contexto
 
-El backend está construido sobre una arquitectura de microservicios desplegados en AWS EKS (Elastic Kubernetes Service). Estos microservicios son responsables de distintas funcionalidades específicas, como la gestión de usuarios, autenticación, y operaciones de transferencia.
+Este diagrama presenta una vista general del sistema, mostrando la interacción entre los usuarios, el sistema bancario central y los servicios externos. El usuario accede a través del "App Banking System" desplegado en AWS, el cual se comunica con el "Banking System" para procesar registro, login y transacciones. Este sistema se integra con el core bancario, servicios biométricos, proveedores de notificaciones (SendGrid, Twilio, Firebase) y el sistema de auditoría (Grafana).
 
-#### Componentes Clave del Backend
+![Diagrama de Contexto](Diagramas/Context%20BP.png)
 
-- **EKS**: Permite el despliegue y orquestación de los microservicios, proporcionando escalabilidad y eficiencia en costos.
-- **Multi-región para catastro**: Se utiliza un despliegue multi-región para garantizar disponibilidad y redundancia de los datos, particularmente importante en servicios financieros.
-- **Patrón SAGA**: Se emplea el patrón SAGA para coordinar transacciones distribuidas entre los microservicios, asegurando consistencia en las operaciones.
-- **Patrón de Auditoría Centralizado**: Se implementa un sistema de auditoría centralizado que registra todas las acciones de los clientes, permitiendo trazabilidad completa y cumplimiento normativo.
+### C2 - Diagrama de Contenedores
 
-### 3. Infraestructura en AWS
+Este diagrama descompone el "Banking System" en contenedores específicos. Se evidencia el uso de microservicios desplegados en AWS EKS y servicios gestionados como Redis, S3, Auth0 y Kafka. Los microservicios cubren autenticación, usuarios, cuentas, transacciones, onboarding, auditoría y notificaciones. Un API Gateway centraliza la entrada y orquesta el flujo hacia cada contenedor según el proceso requerido. La base de datos se gestiona en PostgreSQL, DynamoDB y ElasticSearch según la necesidad del servicio. Se observa cómo se mantiene un flujo desacoplado, orquestado y resiliente mediante colas Kafka y bases de datos específicas por funcionalidad.
 
-La infraestructura del sistema se despliega en AWS, utilizando servicios como:
+![Diagrama de Contenedores](Diagramas/Banking%20System%20Diagram.png)
 
-- **S3** para almacenamiento de documentos legales.
-- **CloudFront** para distribución de contenido estático.
-- **RDS y DynamoDB** para manejo de datos relacionales y no relacionales.
-- **Auth0** para autenticación basada en OAuth2.0.
+### C3 - Diagrama de Componentes
 
-### 4. Sistema de Autenticación y Autorización
+Este nivel describe internamente componentes como onboarding, gestión de usuarios, procesamiento de transacciones, capa de auditoría, etc.
 
-El sistema utiliza el estándar **OAuth2.0** a través de Auth0 para autenticar a los usuarios. Se recomienda el flujo de autenticación de **Authorization Code** para proporcionar mayor seguridad en la autenticación y proteger las credenciales del usuario.
+Ejemplo Onboarding Orchestration
 
-### 5. Onboarding con Reconocimiento Facial
+![Diagrama de Componentes](Diagramas/Onboarding%20Orchestration%20Component%20Diagram.png)
 
-Para el flujo de Onboarding en la aplicación móvil, se utiliza **Auth0** con reconocimiento facial. Esto permite que el nuevo usuario, una vez registrado, pueda acceder al sistema mediante usuario y clave, huella digital u otro método. Auth0 ofrece servicios integrados de verificación biométrica que simplifican la implementación del reconocimiento facial, asegurando una autenticación segura y cumpliendo con los estándares de seguridad de la industria.
+## 5. Segmentación de Responsabilidades y Desacoplamiento
 
-### 6. Persistencia de Información y Auditoría
+La arquitectura de microservicios permite un desacoplamiento total entre funcionalidades como autenticación, notificaciones, transacciones y auditoría. Cada servicio tiene responsabilidades claramente delimitadas y puede escalarse de forma independiente.
 
-El sistema utiliza una base de datos de auditoría que registra todas las acciones del cliente. Para clientes frecuentes, se propone un patrón de **Cache-Aside** para almacenar datos en caché y mejorar la velocidad de acceso.
+## 6. Patrones de Arquitectura
 
-### 7. Integración y Servicios de API
+Se implementan los siguientes patrones:
 
-El sistema cuenta con una capa de integración compuesta por un **API Gateway** que administra las llamadas a servicios, tales como:
+- Microservicios sobre AWS EKS
+- Patrón SAGA para transacciones distribuidas
+- Auditoría Centralizada
+- Capa API Gateway para orquestación
+- Frontend modular (micro frontends)
 
-1. **Consulta de datos básicos**
-2. **Consulta de movimientos**
-3. **Transferencias**
+## 7. Integraciones Externas
 
-Estos servicios pueden ser tanto internos como externos. Se recomienda añadir servicios adicionales para mejorar el rendimiento y la experiencia del cliente.
+El sistema se integra con:
 
-## Consideraciones Normativas
+- Sistema biométrico del registro civil
+- Core bancario transaccional y de cuentas
+- Sistemas de notificación (SendGrid, Firebase, Twilio)
+- Servicio de autenticación (Auth0)
 
-El sistema cumple con las siguientes regulaciones y mejores prácticas para entidades financieras:
+## 8. Arquitectura Frontend y Móvil
 
-- **Ley de Protección de Datos Personales**: Asegurar la privacidad y confidencialidad de los datos del cliente.
-- **Regulaciones de Seguridad Financiera**: Implementación de autenticación multifactorial y medidas de ciberseguridad.
-- **Notificaciones Mandatorias**: Cumplimiento de la norma que requiere notificar al usuario sobre cualquier movimiento en su cuenta.
+El frontend está desarrollado en React para la web y React Native para la móvil, utilizando micro-frontends para lograr modularidad, escalabilidad y mantenibilidad.
 
-## Requerimientos de Arquitectura
+## 9. Acceso a Datos
 
-Para garantizar la calidad del servicio, la arquitectura se diseñó con:
+La información se almacena y consulta desde RDS (relacional) y DynamoDB (NoSQL), dependiendo del tipo de dato. Las acciones del usuario se almacenan en una base de datos de auditoría.
 
-- **Alta Disponibilidad (HA)**: Despliegue multi-región y balanceadores de carga.
-- **Tolerancia a Fallos y Recuperación ante Desastres (DR)**: Uso de backups y replicación.
-- **Excelencia Operativa y Auto-Healing**: Monitoreo continuo y reinicio automático de instancias fallidas.
-- **Seguridad**: Protección de datos, autenticación avanzada y auditoría.
+## 10. Arquitectura Cloud (AWS)
 
-### Diagrama de Arquitectura C4
+La infraestructura está desplegada en AWS y utiliza:
 
-El sistema se documenta siguiendo el modelo C4, estructurado en tres niveles:
+- S3, CloudFront, EKS, RDS, DynamoDB
+- Autenticación con Auth0 (OAuth2.0)
+- Balanceadores de carga y multi-región para alta disponibilidad
 
-1. **Modelo de Contexto**: Visión general del sistema y sus interacciones externas.
-2. **Modelo de Contenedor**: Componentes internos del sistema y sus responsabilidades.
-3. **Modelo de Componentes**: Interacciones detalladas de cada componente.
+## 11. Costos y Escalabilidad
 
-Puedes visualizar el diagrama C4 completo [aquí](https://s.icepanel.io/YgnsRceG2Wj9FX/EYxq).
+El uso de servicios serverless, contenedores orquestados (EKS) y almacenamiento distribuido permite optimizar costos y escalar de forma automática según demanda.
+
+## 12. Autenticación y Seguridad
+
+Se emplea OAuth2.0 con Auth0, MFA, y flujos de autorización Code Flow. El onboarding incluye verificación biométrica con reconocimiento facial.
+
+## 13. Integración con Onboarding
+
+El onboarding se realiza desde la aplicación móvil e integra validaciones biométricas y creación de usuario, gestionadas a través de Auth0.
+
+## 14. Auditoría
+
+Toda acción relevante es auditada y almacenada en una base de datos. Grafana permite visualizar la actividad del sistema en tiempo real.
+
+## 15. Regulaciones y Seguridad
+
+Se cumple con:
+
+- Ley de Protección de Datos
+- Seguridad financiera (MFA, cifrado, segregación de datos)
+
+## 16. Alta Disponibilidad y Tolerancia a Fallos
+
+Se utiliza una arquitectura multi-región, backups programados, balanceo de carga, y mecanismos de auto-healing.
+
+## 17. Monitoreo
+
+Grafana + Prometheus para monitoreo de infraestructura y servicios, alertas en tiempo real, y paneles customizados para cada microservicio.
 
 ## Conclusión
 
-Esta arquitectura modular y desacoplada permite a la institución financiera operar de manera segura, escalable y eficiente, cumpliendo con las normativas y adaptándose a futuras necesidades de negocio. La elección de AWS para la infraestructura y el uso de patrones avanzados como SAGA y auditoría centralizada aseguran un servicio bancario confiable y seguro.
+La arquitectura propuesta es modular, segura, escalable y cumple con todos los criterios normativos y técnicos requeridos. Se apoya en tecnologías modernas y servicios cloud para garantizar una operación eficiente y resiliente.
 
-## Extra
+## Links
 
-ADR propuesto para la arquitectura - [ADR Propuesto](ADR-Propuesto.md)
+Icepanel diagramas C4: [ICEPANEL](https://s.icepanel.io/YgnsRceG2Wj9FX/EYxq/landscape/diagrams/viewer?diagram=4FKBv3jp9s&model=MQ0LYMfVsn&overlay_tab=status&overlay_group=all&x1=-1334.6&y1=-412.4&x2=1672&y2=1307.6)
+
+Github: [ccazares](https://github.com/dev-ccazares/arquitectura-bp)
